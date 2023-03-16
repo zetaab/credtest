@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -33,7 +34,9 @@ func main() {
 
 	go aliveCheck(aws.StringValue(result.Credentials.AccessKeyId), aws.StringValue(result.Credentials.SecretAccessKey), aws.StringValue(result.Credentials.SessionToken))
 
-	aliveCheckNew()
+	go aliveCheckNew()
+
+	aliveCheckNew2()
 }
 
 // kops call with assumed role
@@ -57,7 +60,8 @@ func aliveCheck(accessid, secretkey, token string) {
 	for {
 		res, err := stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 		if err != nil {
-			log.Fatalf("aliveCheck loop %s", err)
+			log.Printf("aliveCheck loop %s", err)
+			return
 		}
 		log.Printf("old %+v", res)
 		time.Sleep(1 * time.Minute)
@@ -90,9 +94,51 @@ func aliveCheckNew() {
 	for {
 		res, err := stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 		if err != nil {
-			log.Fatalf("aliveCheckNew loop %s", err)
+			log.Printf("aliveCheckNew loop %s", err)
+			return
 		}
 		log.Printf("new %+v", res)
+		time.Sleep(1 * time.Minute)
+	}
+}
+
+func aliveCheckNew2() {
+	tmpl := fmt.Sprintf(`[profile default]
+	region = eu-central-1
+	
+	[profile assumed]
+	role_arn = %s
+	source_profile = default`, os.Getenv("KOPS_ROLE_ARN"))
+
+	err := os.WriteFile("/code/.aws/config", []byte(tmpl), 0644)
+	if err != nil {
+		log.Fatalf("aliveCheckNew2 writefile %s", err)
+	}
+	os.Setenv("AWS_PROFILE", "assumed")
+
+	config := aws.NewConfig().WithRegion("eu-central-1")
+
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Config:            *config,
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err != nil {
+		log.Fatalf("aliveCheckNew2 sess %s", err)
+	}
+
+	requestLogger := newRequestLogger()
+
+	stsClient := sts.New(sess, config)
+	stsClient.Handlers.Send.PushFront(requestLogger)
+
+	// we can think that kops cli is executed in loop "enough long"
+	for {
+		res, err := stsClient.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+		if err != nil {
+			log.Printf("aliveCheckNew2 loop %s", err)
+			return
+		}
+		log.Printf("new2 %+v", res)
 		time.Sleep(1 * time.Minute)
 	}
 }
