@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credtest
+  labels:
+    app.kubernetes.io/name: credtest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: credtest
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: credtest
+    spec:
+      serviceAccountName: kapi
+      automountServiceAccountToken: true
+      containers:
+      - name: credtest
+        image: jesseh/credtest:latest
+        imagePullPolicy: Always
+        command: ["/code/credtest"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: AWS_REGION
+          value: eu-central-1
+        - name: AWS_DEFAULT_REGION
+          value: eu-central-1
+        - name: KOPS_ROLE_ARN
+          value: arn:aws:iam::666666:role/kaas-role
