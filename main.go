@@ -103,12 +103,8 @@ func aliveCheckNew() {
 }
 
 func aliveCheckNew2() {
-	tmpl := fmt.Sprintf(`[profile default]
-	region = eu-central-1
-	
-	[profile assumed]
-	role_arn = %s
-	source_profile = default`, os.Getenv("KOPS_ROLE_ARN"))
+	tmpl := fmt.Sprintf(`[profile assumed]
+	role_arn = %s`, os.Getenv("KOPS_ROLE_ARN"))
 
 	err := os.WriteFile("/code/.aws/config", []byte(tmpl), 0644)
 	if err != nil {
