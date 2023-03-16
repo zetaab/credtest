@@ -24,7 +24,7 @@ func main() {
 
 	svc := sts.New(sess)
 	result, err := svc.AssumeRole(&sts.AssumeRoleInput{
-		RoleArn:         aws.String(os.Getenv("KOPS_ROLE_ARN")),
+		RoleArn:         aws.String(os.Getenv("AWS_ASSUME_ROLE_ARN")),
 		RoleSessionName: aws.String("kopsrole"),
 		DurationSeconds: aws.Int64(60 * 60 * 1), // 1 hours, due to role chaining its aws maximum
 	})
@@ -79,7 +79,7 @@ func aliveCheckNew() {
 		log.Fatalf("aliveCheckNew sess %s", err)
 	}
 
-	roleARN := os.Getenv("KOPS_ROLE_ARN")
+	roleARN := os.Getenv("AWS_ASSUME_ROLE_ARN")
 	if roleARN != "" {
 		creds := stscreds.NewCredentials(sess, roleARN)
 		config = &aws.Config{Credentials: creds}
@@ -104,7 +104,7 @@ func aliveCheckNew() {
 
 func aliveCheckNew2() {
 	tmpl := fmt.Sprintf(`[profile assumed]
-	role_arn = %s`, os.Getenv("KOPS_ROLE_ARN"))
+	role_arn = %s`, os.Getenv("AWS_ASSUME_ROLE_ARN"))
 
 	err := os.WriteFile("/code/.aws/config", []byte(tmpl), 0644)
 	if err != nil {
